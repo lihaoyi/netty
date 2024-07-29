@@ -5,6 +5,7 @@ import $ivy.`ant:ant-optional:1.5.3-1`
 trait NettyModule extends MavenModule{
   def testModuleDeps: Seq[MavenModule] = Nil
   def testIvyDeps: T[Agg[mill.scalalib.Dep]] = T{ Agg() }
+  def javacOptions = Seq("--add-exports", "java.base/sun.security.x509=ALL-UNNAMED")
   object test extends MavenModule with MavenTests with TestModule.Junit5{
     def moduleDeps = super.moduleDeps ++ testModuleDeps
     def testFramework = "com.github.sbt.junit.jupiter.api.JupiterFramework"
@@ -21,13 +22,24 @@ trait NettyModule extends MavenModule{
       ivy"org.jctools:jctools-core:4.0.5",
       ivy"io.netty:netty-tcnative-classes:2.0.65.Final",
       ivy"com.barchart.udt:barchart-udt-bundle:2.3.0",
+      ivy"com.aayushatharva.brotli4j:native-osx-aarch64:1.16.0",
+      ivy"org.jboss.marshalling:jboss-marshalling:2.0.5.Final",
+      ivy"com.aayushatharva.brotli4j:brotli4j:1.16.0",
+      ivy"org.apache.commons:commons-compress:1.26.0",
+      ivy"com.jcraft:jzlib:1.1.3",
+      ivy"net.jpountz.lz4:lz4:1.3.0",
+      ivy"com.ning:compress-lzf:1.0.3",
+      ivy"com.github.jponge:lzma-java:1.3",
+      ivy"com.github.luben:zstd-jni:1.5.5-11",
     ) ++ testIvyDeps()
 
     def forkWorkingDir = NettyModule.this.millSourcePath
     def forkArgs = Seq(
       "-DnativeImage.handlerMetadataGroupId=io.netty",
       "-Dnativeimage.handlerMetadataArtifactId=netty-" + NettyModule.this.millModuleSegments.parts.last,
-      "-XX:+AllowRedefinitionToAddDeleteMethods"
+      "-XX:+AllowRedefinitionToAddDeleteMethods",
+      "--add-exports", "java.base/sun.security.x509=ALL-UNNAMED",
+      "-enableassertions"
     )
 
     def compile = T{
@@ -37,6 +49,12 @@ trait NettyModule extends MavenModule{
       os.copy(sup.classes.path, testClasses, createFolders = true)
       sup.copy(classes = PathRef(testClasses))
     }
+    def javacOptions = Seq(
+//      "--add-exports", "java.base/sun.security.x509=ALL-UNNAMED",
+      "-source", "1.8",
+      "-target", "1.8"
+    )
+//    def forkArgs = Seq("--add-exports", "java.base/sun.security.x509=ALL-UNNAMED")
   }
 
 }
@@ -73,17 +91,6 @@ object codec extends NettyModule {
     ivy"com.github.jponge:lzma-java:1.3",
     ivy"com.github.luben:zstd-jni:1.5.5-11",
     ivy"com.google.protobuf.nano:protobuf-javanano:3.0.0-alpha-5",
-  )
-  def testIvyDeps = Agg(
-    ivy"org.jboss.marshalling:jboss-marshalling:2.0.5.Final",
-    ivy"com.aayushatharva.brotli4j:brotli4j:1.16.0",
-    ivy"org.apache.commons:commons-compress:1.26.0",
-    ivy"com.jcraft:jzlib:1.1.3",
-    ivy"net.jpountz.lz4:lz4:1.3.0",
-    ivy"com.ning:compress-lzf:1.0.3",
-    ivy"com.github.jponge:lzma-java:1.3",
-    ivy"com.github.luben:zstd-jni:1.5.5-11",
-    ivy"com.aayushatharva.brotli4j:native-osx-aarch64:1.16.0"
   )
 }
 
@@ -249,7 +256,6 @@ object handler extends NettyModule{
     ivy"org.conscrypt:conscrypt-openjdk-uber:2.5.2",
 
   )
-  def javacOptions = Seq("--add-exports", "java.base/sun.security.x509=ALL-UNNAMED")
 }
 
 
@@ -449,10 +455,6 @@ object `transport-rxtx` extends NettyModule{
 object `transport-sctp` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport, codec)
   def testModuleDeps = Seq(transport.test)
-  def javacOptions = Seq(
-    "-source", "1.8",
-    "-target", "1.8"
-  )
 }
 // transport-udt/pom.xml
 object `transport-udt` extends NettyModule{
