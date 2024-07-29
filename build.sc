@@ -18,14 +18,25 @@ trait NettyModule extends MavenModule{
       ivy"org.reflections:reflections:0.10.2",
       ivy"com.google.code.gson:gson:2.8.9",
       ivy"com.google.guava:guava:28.2-jre",
-      ivy"org.jctools:jctools-core:4.0.5"
+      ivy"org.jctools:jctools-core:4.0.5",
+      ivy"io.netty:netty-tcnative-classes:2.0.65.Final",
+      ivy"com.barchart.udt:barchart-udt-bundle:2.3.0",
     ) ++ testIvyDeps()
 
     def forkWorkingDir = NettyModule.this.millSourcePath
     def forkArgs = Seq(
       "-DnativeImage.handlerMetadataGroupId=io.netty",
-      "-Dnativeimage.handlerMetadataArtifactId=netty-" + NettyModule.this.millModuleSegments.parts.last
+      "-Dnativeimage.handlerMetadataArtifactId=netty-" + NettyModule.this.millModuleSegments.parts.last,
+      "-XX:+AllowRedefinitionToAddDeleteMethods"
     )
+
+    def compile = T{
+      // Hack to satisfy fragile tests that look for /test-classes/ in the file paths
+      val sup = super.compile()
+      val testClasses = T.dest / "test-classes"
+      os.copy(sup.classes.path, testClasses, createFolders = true)
+      sup.copy(classes = PathRef(testClasses))
+    }
   }
 
 }
@@ -235,7 +246,7 @@ object handler extends NettyModule{
     ivy"org.bouncycastle:bctls-jdk15on:1.69",
     ivy"software.amazon.cryptools:AmazonCorrettoCryptoProvider:1.1.0;classifier=linux-x86_64",
     ivy"org.conscrypt:conscrypt-openjdk-uber:2.5.2",
-    ivy"io.netty:netty-tcnative-classes:2.0.65.Final",
+
   )
   def javacOptions = Seq("--add-exports", "java.base/sun.security.x509=ALL-UNNAMED")
 }
