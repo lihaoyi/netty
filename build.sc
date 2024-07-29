@@ -63,11 +63,8 @@ trait NettyModule extends MavenModule{
       os.copy(sup.classes.path, testClasses, createFolders = true)
       sup.copy(classes = PathRef(testClasses))
     }
-    def javacOptions = Seq(
-      "-source", "1.8",
-      "-target", "1.8"
-    )
-//    def forkArgs = Seq("--add-exports", "java.base/sun.security.x509=ALL-UNNAMED")
+
+    def javacOptions = Seq("-source", "1.8", "-target", "1.8")
   }
 }
 
