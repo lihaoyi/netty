@@ -83,6 +83,7 @@ object codec extends NettyModule {
     ivy"com.ning:compress-lzf:1.0.3",
     ivy"com.github.jponge:lzma-java:1.3",
     ivy"com.github.luben:zstd-jni:1.5.5-11",
+    ivy"com.aayushatharva.brotli4j:native-osx-aarch64:1.16.0"
   )
 }
 
