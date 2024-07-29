@@ -60,7 +60,7 @@ trait NettyModule extends MavenModule{
       // Hack to satisfy fragile tests that look for /test-classes/ in the file paths
       val sup = super.compile()
       val testClasses = T.dest / "test-classes"
-      os.copy(sup.classes.path, testClasses, createFolders = true)
+      if (os.exists(sup.classes.path)) os.copy(sup.classes.path, testClasses, createFolders = true)
       sup.copy(classes = PathRef(testClasses))
     }
 
