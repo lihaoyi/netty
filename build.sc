@@ -1,9 +1,6 @@
 // TODO:
 // resolver-dns-native-macos.test
 // testsuite*
-// transport.test.test 2 tests failed:
-//   io.netty.bootstrap.BootstrapTest mustCallInitializerExtensions()
-//   io.netty.bootstrap.ServerBootstrapTest mustCallInitializerExtensions()
 // transport-native-epoll.test
 //   failed to load the required native library
 // transport-udt
