@@ -51,6 +51,7 @@ trait NettyModule extends MavenModule{
     def forkArgs = Seq(
       "-DnativeImage.handlerMetadataGroupId=io.netty",
       "-Dnativeimage.handlerMetadataArtifactId=netty-" + NettyModule.this.millModuleSegments.parts.last,
+      "-Dio.netty.bootstrap.extensions=serviceload",
       "-XX:+AllowRedefinitionToAddDeleteMethods",
       "--add-exports", "java.base/sun.security.x509=ALL-UNNAMED",
       "-enableassertions"
