@@ -369,6 +369,7 @@ object `testsuite-shading` extends NettyModule{
 object transport extends NettyModule{
   def moduleDeps = Seq(common, buffer, resolver)
   def testIvyDeps = Agg(
+    ivy"org.jctools:jctools-core:4.0.5",
     ivy"ch.qos.logback:logback-classic:1.1.7",
   )
 }
