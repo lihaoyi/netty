@@ -2,7 +2,24 @@ import mill._, javalib._
 import $ivy.`org.codehaus.groovy:groovy:3.0.9`
 import $ivy.`org.codehaus.groovy:groovy-ant:3.0.9`
 import $ivy.`ant:ant-optional:1.5.3-1`
-trait NettyModule extends MavenModule
+trait NettyModule extends MavenModule{
+  def testModuleDeps: Seq[MavenModule] = Nil
+  def testIvyDeps: T[Agg[mill.scalalib.Dep]] = T{ Agg() }
+  object test extends MavenModule with MavenTests with TestModule.Junit5{
+    def moduleDeps = super.moduleDeps ++ testModuleDeps
+    def ivyDeps = super.ivyDeps() ++ Agg(
+      ivy"org.hamcrest:hamcrest-library:1.3",
+      ivy"org.assertj:assertj-core:3.18.0",
+      ivy"org.junit.jupiter:junit-jupiter-api:5.9.0",
+      ivy"org.junit.jupiter:junit-jupiter-params:5.9.0",
+      ivy"org.mockito:mockito-core:2.18.3",
+      ivy"org.reflections:reflections:0.10.2",
+      ivy"com.google.code.gson:gson:2.8.9",
+      ivy"com.google.guava:guava:28.2-jre",
+    ) ++ testIvyDeps()
+  }
+
+}
 
 // all/pom.xml
 object all extends NettyModule{
@@ -23,6 +40,7 @@ object buffer extends NettyModule{
 // codec/pom.xml
 object codec extends NettyModule {
   def moduleDeps = Seq(common, buffer, transport)
+  def testModuleDeps = Seq(transport.test)
   def ivyDeps = Agg(
     ivy"com.google.protobuf:protobuf-java:2.6.1",
   )
@@ -36,23 +54,38 @@ object codec extends NettyModule {
     ivy"com.github.luben:zstd-jni:1.5.5-11",
     ivy"com.google.protobuf.nano:protobuf-javanano:3.0.0-alpha-5",
   )
+  def testIvyDeps = Agg(
+    ivy"org.jboss.marshalling:jboss-marshalling:2.0.5.Final",
+    ivy"com.aayushatharva.brotli4j:brotli4j:1.16.0",
+    ivy"org.apache.commons:commons-compress:1.26.0",
+    ivy"net.jpountz.lz4:lz4:1.3.0",
+    ivy"com.ning:compress-lzf:1.0.3",
+    ivy"com.github.jponge:lzma-java:1.3",
+    ivy"com.github.luben:zstd-jni:1.5.5-11",
+  )
 }
 
 // codec-dns/pom.xml
 object `codec-dns` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport, codec)
+  def testModuleDeps = Seq(transport.test)
 }
 
 // codec-haproxy/pom.xml
 object `codec-haproxy` extends NettyModule{
   def moduleDeps = Seq(buffer, transport, codec)
+  def testModuleDeps = Seq(transport.test)
 }
 
 // codec-http/pom.xml
 object `codec-http` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport, codec, handler)
+  def testModuleDeps = Seq(transport.test)
   def compileIvyDeps = Agg(
     ivy"com.jcraft:jzlib:1.1.3",
+    ivy"com.aayushatharva.brotli4j:brotli4j:1.16.0",
+  )
+  def testIvyDeps = Agg(
     ivy"com.aayushatharva.brotli4j:brotli4j:1.16.0",
   )
 }
@@ -60,6 +93,7 @@ object `codec-http` extends NettyModule{
 // codec-http2/pom.xml
 object `codec-http2` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport, codec, handler, `codec-http`)
+  def testModuleDeps = Seq(transport.test)
   def compileIvyDeps = Agg(
     ivy"com.aayushatharva.brotli4j:brotli4j:1.16.0",
   )
@@ -68,36 +102,43 @@ object `codec-http2` extends NettyModule{
 // codec-memcache/pom.xml
 object `codec-memcache` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport, codec)
+  def testModuleDeps = Seq(transport.test)
 }
 
 // codec-mqtt/pom.xml
 object `codec-mqtt` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport, codec)
+  def testModuleDeps = Seq(transport.test)
 }
 
 // codec-redis/pom.xml
 object `codec-redis` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport, codec)
+  def testModuleDeps = Seq(transport.test)
 }
 
 // codec-smtp/pom.xml
 object `codec-smtp` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport, codec)
+  def testModuleDeps = Seq(transport.test)
 }
 
 // codec-socks/pom.xml
 object `codec-socks` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport, codec)
+  def testModuleDeps = Seq(transport.test)
 }
 
 // codec-stomp/pom.xml
 object `codec-stomp` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport, codec)
+  def testModuleDeps = Seq(transport.test)
 }
 
 // codec-xml/pom.xml
 object `codec-xml` extends NettyModule{
   def moduleDeps = Seq(buffer, transport, codec)
+  def testModuleDeps = Seq(transport.test)
   def ivyDeps = Agg(
     ivy"com.fasterxml:aalto-xml:1.0.0"
   )
@@ -114,6 +155,13 @@ object common extends NettyModule{
     ivy"org.apache.logging.log4j:log4j-api:2.17.2",
     ivy"org.apache.logging.log4j:log4j-1.2-api:2.17.2",
     ivy"org.slf4j:slf4j-api:1.7.30",
+  )
+  def testIvyDeps = Agg(
+    ivy"org.jetbrains:annotations-java5:23.0.0",
+    ivy"commons-logging:commons-logging:1.2",
+    ivy"org.apache.logging.log4j:log4j-api:2.17.2",
+    ivy"org.apache.logging.log4j:log4j-1.2-api:2.17.2",
+    ivy"org.jctools:jctools-core:4.0.5",
   )
 
   def script = T.source(millSourcePath / "src" / "main" / "script")
@@ -162,7 +210,7 @@ object example extends NettyModule{
 // handler/pom.xml
 object handler extends NettyModule{
   def moduleDeps = Seq(common, resolver, buffer, transport, `transport-native-unix-common`, codec)
-
+  def testModuleDeps = Seq(transport.test)
   def compileIvyDeps = Agg(
     ivy"org.bouncycastle:bcpkix-jdk15on:1.69",
     ivy"org.bouncycastle:bctls-jdk15on:1.69",
@@ -172,6 +220,13 @@ object handler extends NettyModule{
     ivy"org.eclipse.jetty.npn:npn-api:1.1.1.v20141010",
   )
 
+  def testIvyDeps = Agg(
+    ivy"org.bouncycastle:bcpkix-jdk15on:1.69",
+    ivy"org.bouncycastle:bctls-jdk15on:1.69",
+    ivy"software.amazon.cryptools:AmazonCorrettoCryptoProvider:1.1.0;classifier=linux-x86_64",
+    ivy"org.conscrypt:conscrypt-openjdk-uber:2.5.2",
+    ivy"io.netty:netty-tcnative-classes:2.0.65.Final",
+  )
   def javacOptions = Seq("--add-exports", "java.base/sun.security.x509=ALL-UNNAMED")
 }
 
@@ -179,6 +234,7 @@ object handler extends NettyModule{
 // handler-proxy/pom.xml
 object `handler-proxy` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport, codec, `codec-socks`, `codec-http`, handler)
+  def testModuleDeps = Seq(transport.test)
 }
 
 // handler-ssl-ocsp/pom.xml
@@ -216,6 +272,10 @@ object resolver extends NettyModule{
 // resolver-dns/pom.xml
 object `resolver-dns` extends NettyModule{
   def moduleDeps = Seq(common, buffer, resolver, transport, codec, `codec-dns`, handler)
+  def testModuleDeps = Seq(transport.test)
+  def testIvyDeps = Agg(
+    ivy"org.apache.directory.server:apacheds-protocol-dns:1.5.7"
+  )
 }
 
 // resolver-dns-classes-macos/pom.xml
@@ -225,6 +285,10 @@ object `resolver-dns-classes-macos` extends NettyModule{
 // resolver-dns-native-macos/pom.xml
 object `resolver-dns-native-macos` extends NettyModule{
   def moduleDeps = Seq(resolver)
+  def testModuleDeps = Seq(`resolver-dns`, `resolver-dns-classes-macos`)
+  def testIvyDeps = Agg(
+    ivy"org.apache.directory.server:apacheds-protocol-dns:1.5.7"
+  )
 }
 
 
@@ -255,6 +319,7 @@ object `testsuite-http2` extends NettyModule{
 // testsuite-native/pom.xml
 object `testsuite-native` extends NettyModule{
   def moduleDeps = Seq(`transport-native-kqueue`, `resolver-dns-native-macos`, `transport-native-epoll`)
+  def testModuleDeps = Seq(`resolver-dns-classes-macos`)
 }
 
 // testsuite-native-image/pom.xml
@@ -283,21 +348,37 @@ object `testsuite-osgi` extends NettyModule{
     resolver, `resolver-dns`,
     transport, `transport-sctp`, `transport-udt`
   )
+
+  def ivyDeps = Agg(
+    ivy"org.apache.felix:org.apache.felix.configadmin:1.9.14",
+  )
+  def testIvyDeps = Agg(
+    ivy"org.ops4j.pax.exam:pax-exam-junit4:4.13.0",
+    ivy"org.ops4j.pax.exam:pax-exam-container-native:4.13.0",
+    ivy"org.ops4j.pax.exam:pax-exam-link-assembly:4.13.0",
+    ivy"org.apache.felix:org.apache.felix.framework:6.0.2",
+  )
 }
 // testsuite-shading/pom.xml
 object `testsuite-shading` extends NettyModule{
-
+  def moduleDeps = Seq(common)
 }
 
 
 // transport/pom.xml
 object transport extends NettyModule{
   def moduleDeps = Seq(common, buffer, resolver)
+  def testIvyDeps = Agg(
+    ivy"ch.qos.logback:logback-classic:1.1.7",
+  )
 }
 
 // transport-blockhound-tests/pom.xml
 object `transport-blockhound-tests` extends NettyModule{
   def moduleDeps = Seq(transport, handler, `resolver-dns`)
+  def ivyDeps = Agg(
+    ivy"io.projectreactor.tools:blockhound:1.0.6.RELEASE"
+  )
 }
 
 // transport-classes-epoll/pom.xml
@@ -312,10 +393,16 @@ object `transport-classes-kqueue` extends NettyModule{
 // transport-native-epoll/pom.xml
 object `transport-native-epoll` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport, `transport-native-unix-common`, `transport-classes-epoll`)
+  def testModuleDeps = Seq(testsuite, `transport-native-unix-common-tests`)
+
+  def testIvyDeps = Agg(
+    ivy"io.github.artsok:rerunner-jupiter:2.1.6"
+  )
 }
 // transport-native-kqueue/pom.xml
 object `transport-native-kqueue` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport, `transport-native-unix-common`, `transport-classes-kqueue`)
+  def testModuleDeps = Seq(testsuite, `transport-native-unix-common-tests`)
 }
 // transport-native-unix-common/pom.xml
 object `transport-native-unix-common` extends NettyModule{
@@ -338,6 +425,7 @@ object `transport-rxtx` extends NettyModule{
 // transport-sctp/pom.xml
 object `transport-sctp` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport, codec)
+  def testModuleDeps = Seq(transport.test)
   def javacOptions = Seq(
     "-source", "1.8",
     "-target", "1.8"
@@ -347,7 +435,9 @@ object `transport-sctp` extends NettyModule{
 object `transport-udt` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport)
   def ivyDeps = Agg(
-    ivy"com.barchart.udt:barchart-udt-bundle:2.3.0"
+    ivy"com.barchart.udt:barchart-udt-bundle:2.3.0",
+    ivy"com.google.caliper:caliper:0.5-rc1",
+    ivy"com.yammer.metrics:metrics-core:2.2.0"
   )
 }
 // pom.xml
