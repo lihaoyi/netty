@@ -1,6 +1,4 @@
 // TODO:
-// handler.test
-//   org.opentest4j.TestAbortedException
 // resolver-dns-native-macos.test
 // testsuite*
 // transport.test.test 2 tests failed:
@@ -17,10 +15,7 @@ import $ivy.`ant:ant-optional:1.5.3-1`
 trait NettyModule extends MavenModule{
   def testModuleDeps: Seq[MavenModule] = Nil
   def testIvyDeps: T[Agg[mill.scalalib.Dep]] = T{ Agg() }
-  def javacOptions = Seq(
-    "-source", "1.8",
-    "-target", "1.8"
-  )
+  def javacOptions = Seq("-source", "1.8", "-target", "1.8")
   object test extends MavenModule with MavenTests with TestModule.Junit5{
     def moduleDeps = super.moduleDeps ++ testModuleDeps
     def testFramework = "com.github.sbt.junit.jupiter.api.JupiterFramework"
