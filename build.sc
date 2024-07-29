@@ -1,3 +1,15 @@
+// TODO:
+// handler.test
+// resolver-dns-native-macos.test
+// testsuite*
+// transport.test.test 2 tests failed:
+//   io.netty.bootstrap.BootstrapTest mustCallInitializerExtensions()
+//   io.netty.bootstrap.ServerBootstrapTest mustCallInitializerExtensions()
+// transport-native-epoll.test
+//   failed to load the required native library
+// transport-udt
+
+
 import mill._, javalib._
 import $ivy.`org.codehaus.groovy:groovy:3.0.9`
 import $ivy.`org.codehaus.groovy:groovy-ant:3.0.9`
@@ -5,7 +17,10 @@ import $ivy.`ant:ant-optional:1.5.3-1`
 trait NettyModule extends MavenModule{
   def testModuleDeps: Seq[MavenModule] = Nil
   def testIvyDeps: T[Agg[mill.scalalib.Dep]] = T{ Agg() }
-  def javacOptions = Seq("--add-exports", "java.base/sun.security.x509=ALL-UNNAMED")
+  def javacOptions = Seq(
+    "-source", "1.8",
+    "-target", "1.8"
+  )
   object test extends MavenModule with MavenTests with TestModule.Junit5{
     def moduleDeps = super.moduleDeps ++ testModuleDeps
     def testFramework = "com.github.sbt.junit.jupiter.api.JupiterFramework"
@@ -21,6 +36,7 @@ trait NettyModule extends MavenModule{
       ivy"com.google.guava:guava:28.2-jre",
       ivy"org.jctools:jctools-core:4.0.5",
       ivy"io.netty:netty-tcnative-classes:2.0.65.Final",
+      ivy"io.netty:netty-tcnative-boringssl-static:2.0.65.Final",
       ivy"com.barchart.udt:barchart-udt-bundle:2.3.0",
       ivy"com.aayushatharva.brotli4j:native-osx-aarch64:1.16.0",
       ivy"org.jboss.marshalling:jboss-marshalling:2.0.5.Final",
@@ -31,6 +47,9 @@ trait NettyModule extends MavenModule{
       ivy"com.ning:compress-lzf:1.0.3",
       ivy"com.github.jponge:lzma-java:1.3",
       ivy"com.github.luben:zstd-jni:1.5.5-11",
+      ivy"ch.qos.logback:logback-classic:1.1.7",
+      ivy"org.eclipse.jetty.npn:npn-api:1.1.1.v20141010",
+
     ) ++ testIvyDeps()
 
     def forkWorkingDir = NettyModule.this.millSourcePath
@@ -50,7 +69,6 @@ trait NettyModule extends MavenModule{
       sup.copy(classes = PathRef(testClasses))
     }
     def javacOptions = Seq(
-//      "--add-exports", "java.base/sun.security.x509=ALL-UNNAMED",
       "-source", "1.8",
       "-target", "1.8"
     )
@@ -189,6 +207,7 @@ object common extends NettyModule{
     ivy"org.jetbrains:annotations-java5:23.0.0",
     ivy"commons-logging:commons-logging:1.2",
     ivy"org.apache.logging.log4j:log4j-api:2.17.2",
+    ivy"org.apache.logging.log4j:log4j-core:2.17.2",
     ivy"org.apache.logging.log4j:log4j-1.2-api:2.17.2",
     ivy"org.jctools:jctools-core:4.0.5",
   )
@@ -396,10 +415,6 @@ object `testsuite-shading` extends NettyModule{
 // transport/pom.xml
 object transport extends NettyModule{
   def moduleDeps = Seq(common, buffer, resolver)
-  def testIvyDeps = Agg(
-    ivy"org.jctools:jctools-core:4.0.5",
-    ivy"ch.qos.logback:logback-classic:1.1.7",
-  )
 }
 
 // transport-blockhound-tests/pom.xml
