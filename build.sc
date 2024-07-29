@@ -7,7 +7,9 @@ trait NettyModule extends MavenModule{
   def testIvyDeps: T[Agg[mill.scalalib.Dep]] = T{ Agg() }
   object test extends MavenModule with MavenTests with TestModule.Junit5{
     def moduleDeps = super.moduleDeps ++ testModuleDeps
-    def ivyDeps = super.ivyDeps() ++ Agg(
+    def testFramework = "com.github.sbt.junit.jupiter.api.JupiterFramework"
+    def ivyDeps = Agg(
+      ivy"com.github.sbt.junit:jupiter-interface:0.11.2",
       ivy"org.hamcrest:hamcrest-library:1.3",
       ivy"org.assertj:assertj-core:3.18.0",
       ivy"org.junit.jupiter:junit-jupiter-api:5.9.0",
@@ -16,7 +18,14 @@ trait NettyModule extends MavenModule{
       ivy"org.reflections:reflections:0.10.2",
       ivy"com.google.code.gson:gson:2.8.9",
       ivy"com.google.guava:guava:28.2-jre",
+      ivy"org.jctools:jctools-core:4.0.5"
     ) ++ testIvyDeps()
+
+    def forkWorkingDir = NettyModule.this.millSourcePath
+    def forkArgs = Seq(
+      "-DnativeImage.handlerMetadataGroupId=io.netty",
+      "-Dnativeimage.handlerMetadataArtifactId=netty-" + NettyModule.this.millModuleSegments.parts.last
+    )
   }
 
 }
@@ -33,7 +42,7 @@ object bom extends NettyModule{
 // buffer/pom.xml
 object buffer extends NettyModule{
   def moduleDeps = Seq(common)
-//  def ivyDeps = Agg(ivy"org.mockito:mockito-core:???")
+  def testIvyDeps = Agg(ivy"org.jctools:jctools-core:4.0.5")
 }
 
 
@@ -58,6 +67,7 @@ object codec extends NettyModule {
     ivy"org.jboss.marshalling:jboss-marshalling:2.0.5.Final",
     ivy"com.aayushatharva.brotli4j:brotli4j:1.16.0",
     ivy"org.apache.commons:commons-compress:1.26.0",
+    ivy"com.jcraft:jzlib:1.1.3",
     ivy"net.jpountz.lz4:lz4:1.3.0",
     ivy"com.ning:compress-lzf:1.0.3",
     ivy"com.github.jponge:lzma-java:1.3",
