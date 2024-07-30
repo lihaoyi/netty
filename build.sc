@@ -41,6 +41,8 @@ trait NettyModule extends MavenModule{
       ivy"com.github.luben:zstd-jni:1.5.5-11",
       ivy"ch.qos.logback:logback-classic:1.1.7",
       ivy"org.eclipse.jetty.npn:npn-api:1.1.1.v20141010",
+      ivy"org.bouncycastle:bcpkix-jdk15on:1.69",
+      ivy"org.bouncycastle:bctls-jdk15on:1.69",
 
     ) ++ testIvyDeps()
 
@@ -396,6 +398,34 @@ object `transport-native-epoll` extends NettyModule{
 object `transport-native-kqueue` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport, `transport-native-unix-common`, `transport-classes-kqueue`)
   def testModuleDeps = Seq(testsuite, `transport-native-unix-common-tests`)
+  def cSources = T.source(millSourcePath / "src" / "main" / "c")
+  def clang = T{
+    val Seq(sourceJar) = resolveDeps(
+      deps = T.task(Agg(ivy"io.netty:netty-jni-util:0.0.9.Final").map(bindDependency())),
+      sources = true
+    )().toSeq
+
+    os.makeDir.all(T.dest  / "src" / "main" / "c")
+    os.proc("jar", "xf", sourceJar.path).call(cwd = T.dest  / "src" / "main" / "c")
+
+    os.proc(
+      "clang",
+      // CFLAGS
+      "-target", "arm64-apple-macos10", "-O3", "-Werror", "-fno-omit-frame-pointer",
+      "-Wunused-variable", "-fvisibility=hidden",
+      "-I" + (T.dest / "src" / "main" / "c"),
+      "-I" + `transport-native-unix-common`.cSources().path,
+      "-I" + sys.props("java.home") + "/include/",
+      "-I" + sys.props("java.home") + "/include/darwin",
+      // LD_FLAGS
+      "-Wl,-weak_library," + (`transport-native-unix-common`.make()._1.path / "libnetty-unix-common.a"),
+      "-Wl,-platform_version,macos,10.9,10.9",
+      // sources
+      os.list(cSources().path)
+    ).call(cwd = T.dest, env = Map("MACOSX_DEPLOYMENT_TARGET" -> "1.9"))
+
+    (PathRef(T.dest / "lib-out"), PathRef(T.dest / "obj-out"))
+  }
 }
 
 object `transport-native-unix-common` extends NettyModule{
@@ -424,7 +454,17 @@ object `transport-native-unix-common` extends NettyModule{
         "LIB_DIR" -> "lib-out",
         "OBJ_DIR" -> "obj-out",
         "MACOSX_DEPLOYMENT_TARGET" -> "10.9",
-        "CFLAGS" -> "-target arm64-apple-macos11 -O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/include/ -I/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/include/darwin",
+        "CFLAGS" -> Seq(
+          "-O3",
+          "-Werror",
+          "-Wno-attributes",
+          "-fPIC",
+          "-fno-omit-frame-pointer",
+          "-Wunused-variable",
+          "-fvisibility=hidden",
+          "-I" + sys.props("java.home") + "/include/",
+          "-I" + sys.props("java.home") + "/include/darwin",
+        ).mkString(" "),
         "LD_FLAGS" -> "-arch arm64 -Wl,--no-as-needed -lrt -Wl,-platform_version,macos,10.9,10.9",
         "LIB_NAME" -> "libnetty-unix-common"
       )
