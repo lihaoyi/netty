@@ -399,6 +399,10 @@ object `transport-native-kqueue` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport, `transport-native-unix-common`, `transport-classes-kqueue`)
   def testModuleDeps = Seq(testsuite, `transport-native-unix-common-tests`)
   def cSources = T.source(millSourcePath / "src" / "main" / "c")
+  def resources = T{
+    os.copy(clang().path, T.dest / "META-INF" / "native" / "libnetty_transport_native_kqueue.jnilib", createFolders = true)
+    Seq(PathRef(T.dest))
+  }
   def clang = T{
     val Seq(sourceJar) = resolveDeps(
       deps = T.task(Agg(ivy"io.netty:netty-jni-util:0.0.9.Final").map(bindDependency())),
@@ -411,20 +415,26 @@ object `transport-native-kqueue` extends NettyModule{
     os.proc(
       "clang",
       // CFLAGS
-      "-target", "arm64-apple-macos10", "-O3", "-Werror", "-fno-omit-frame-pointer",
+      "-O3", "-Werror", "-fno-omit-frame-pointer",
       "-Wunused-variable", "-fvisibility=hidden",
       "-I" + (T.dest / "src" / "main" / "c"),
-      "-I" + `transport-native-unix-common`.cSources().path,
+      "-I" + `transport-native-unix-common`.cHeaders().path,
       "-I" + sys.props("java.home") + "/include/",
       "-I" + sys.props("java.home") + "/include/darwin",
       // LD_FLAGS
       "-Wl,-weak_library," + (`transport-native-unix-common`.make()._1.path / "libnetty-unix-common.a"),
       "-Wl,-platform_version,macos,10.9,10.9",
+      "-Wl,-single_module",
+      "-Wl,-undefined",
+      "-Wl,dynamic_lookup",
+      "-fno-common",
+      "-DPIC",
       // sources
       os.list(cSources().path)
-    ).call(cwd = T.dest, env = Map("MACOSX_DEPLOYMENT_TARGET" -> "1.9"))
+    ).call(cwd = T.dest, env = Map("MACOSX_DEPLOYMENT_TARGET" -> "10.9"))
 
-    (PathRef(T.dest / "lib-out"), PathRef(T.dest / "obj-out"))
+    PathRef(T.dest / "a.out")
+
   }
 }
 
@@ -434,6 +444,12 @@ object `transport-native-unix-common` extends NettyModule{
 
   def makefile = T.source(millSourcePath / "Makefile")
   def cSources = T.source(millSourcePath / "src" / "main" / "c")
+  def cHeaders = T{
+    for(p <- os.walk(cSources().path) if p.ext == "h"){
+      os.copy(p, T.dest / p.relativeTo(cSources().path), createFolders = true)
+    }
+    PathRef(T.dest)
+  }
 
   def make = T{
     val Seq(sourceJar) = resolveDeps(
@@ -455,6 +471,7 @@ object `transport-native-unix-common` extends NettyModule{
         "OBJ_DIR" -> "obj-out",
         "MACOSX_DEPLOYMENT_TARGET" -> "10.9",
         "CFLAGS" -> Seq(
+          "-mmacosx-version-min=10.9",
           "-O3",
           "-Werror",
           "-Wno-attributes",
@@ -465,10 +482,11 @@ object `transport-native-unix-common` extends NettyModule{
           "-I" + sys.props("java.home") + "/include/",
           "-I" + sys.props("java.home") + "/include/darwin",
         ).mkString(" "),
-        "LD_FLAGS" -> "-arch arm64 -Wl,--no-as-needed -lrt -Wl,-platform_version,macos,10.9,10.9",
+        "LD_FLAGS" -> "-Wl,--no-as-needed -lrt -Wl,-platform_version,macos,10.9,10.9",
         "LIB_NAME" -> "libnetty-unix-common"
       )
     )
+
 
     (PathRef(T.dest / "lib-out"), PathRef(T.dest / "obj-out"))
   }
