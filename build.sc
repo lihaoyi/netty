@@ -1,72 +1,124 @@
+import mill._, javalib._
+import $ivy.`org.codehaus.groovy:groovy:3.0.9`
+import $ivy.`org.codehaus.groovy:groovy-ant:3.0.9`
+import $ivy.`ant:ant-optional:1.5.3-1`
 // TODO:
-// resolver-dns-native-macos.test
 // testsuite*
 // transport-native-epoll.test
 //   failed to load the required native library
 // transport-udt
 
-import mill._, javalib._
-import $ivy.`org.codehaus.groovy:groovy:3.0.9`
-import $ivy.`org.codehaus.groovy:groovy-ant:3.0.9`
-import $ivy.`ant:ant-optional:1.5.3-1`
-trait NettyModule extends MavenModule{
-  def testModuleDeps: Seq[MavenModule] = Nil
-  def testIvyDeps: T[Agg[mill.scalalib.Dep]] = T{ Agg() }
+trait NettyBaseModule extends MavenModule{
   def javacOptions = Seq("-source", "1.8", "-target", "1.8")
-  object test extends MavenModule with MavenTests with TestModule.Junit5{
-    def moduleDeps = super.moduleDeps ++ testModuleDeps
-    def testFramework = "com.github.sbt.junit.jupiter.api.JupiterFramework"
-    def ivyDeps = Agg(
-      ivy"com.github.sbt.junit:jupiter-interface:0.11.2",
-      ivy"org.hamcrest:hamcrest-library:1.3",
-      ivy"org.assertj:assertj-core:3.18.0",
-      ivy"org.junit.jupiter:junit-jupiter-api:5.9.0",
-      ivy"org.junit.jupiter:junit-jupiter-params:5.9.0",
-      ivy"org.mockito:mockito-core:2.18.3",
-      ivy"org.reflections:reflections:0.10.2",
-      ivy"com.google.code.gson:gson:2.8.9",
-      ivy"com.google.guava:guava:28.2-jre",
-      ivy"org.jctools:jctools-core:4.0.5",
-      ivy"io.netty:netty-tcnative-classes:2.0.65.Final",
-      ivy"io.netty:netty-tcnative-boringssl-static:2.0.65.Final",
-      ivy"com.barchart.udt:barchart-udt-bundle:2.3.0",
-      ivy"com.aayushatharva.brotli4j:native-osx-aarch64:1.16.0",
-      ivy"org.jboss.marshalling:jboss-marshalling:2.0.5.Final",
-      ivy"com.aayushatharva.brotli4j:brotli4j:1.16.0",
-      ivy"org.apache.commons:commons-compress:1.26.0",
-      ivy"com.jcraft:jzlib:1.1.3",
-      ivy"net.jpountz.lz4:lz4:1.3.0",
-      ivy"com.ning:compress-lzf:1.0.3",
-      ivy"com.github.jponge:lzma-java:1.3",
-      ivy"com.github.luben:zstd-jni:1.5.5-11",
-      ivy"ch.qos.logback:logback-classic:1.1.7",
-      ivy"org.eclipse.jetty.npn:npn-api:1.1.1.v20141010",
-      ivy"org.bouncycastle:bcpkix-jdk15on:1.69",
-      ivy"org.bouncycastle:bctls-jdk15on:1.69",
+}
+trait NettyBaseTestSuiteModule extends NettyBaseModule with TestModule.Junit5{
 
-    ) ++ testIvyDeps()
+  def testFramework = "com.github.sbt.junit.jupiter.api.JupiterFramework"
+  def ivyDeps = Agg(
+    ivy"com.github.sbt.junit:jupiter-interface:0.11.2",
+    ivy"org.hamcrest:hamcrest-library:1.3",
+    ivy"org.assertj:assertj-core:3.18.0",
+    ivy"org.junit.jupiter:junit-jupiter-api:5.9.0",
+    ivy"org.junit.jupiter:junit-jupiter-params:5.9.0",
+    ivy"org.mockito:mockito-core:2.18.3",
+    ivy"org.reflections:reflections:0.10.2",
+    ivy"com.google.code.gson:gson:2.8.9",
+    ivy"com.google.guava:guava:28.2-jre",
+    ivy"org.jctools:jctools-core:4.0.5",
+    ivy"io.netty:netty-tcnative-classes:2.0.65.Final",
+    ivy"io.netty:netty-tcnative-boringssl-static:2.0.65.Final",
+    ivy"com.barchart.udt:barchart-udt-bundle:2.3.0",
+    ivy"com.aayushatharva.brotli4j:native-osx-aarch64:1.16.0",
+    ivy"org.jboss.marshalling:jboss-marshalling:2.0.5.Final",
+    ivy"com.aayushatharva.brotli4j:brotli4j:1.16.0",
+    ivy"org.apache.commons:commons-compress:1.26.0",
+    ivy"com.jcraft:jzlib:1.1.3",
+    ivy"net.jpountz.lz4:lz4:1.3.0",
+    ivy"com.ning:compress-lzf:1.0.3",
+    ivy"com.github.jponge:lzma-java:1.3",
+    ivy"com.github.luben:zstd-jni:1.5.5-11",
+    ivy"ch.qos.logback:logback-classic:1.1.7",
+    ivy"org.eclipse.jetty.npn:npn-api:1.1.1.v20141010",
+    ivy"org.bouncycastle:bcpkix-jdk15on:1.69",
+    ivy"org.bouncycastle:bctls-jdk15on:1.69",
+  )
 
-    def forkWorkingDir = NettyModule.this.millSourcePath
-    def forkArgs = Seq(
-      "-DnativeImage.handlerMetadataGroupId=io.netty",
-      "-Dnativeimage.handlerMetadataArtifactId=netty-" + NettyModule.this.millModuleSegments.parts.last,
-      "-Dio.netty.bootstrap.extensions=serviceload",
-      "-XX:+AllowRedefinitionToAddDeleteMethods",
-      "--add-exports", "java.base/sun.security.x509=ALL-UNNAMED",
-      "-enableassertions"
-    )
+  def forkArgs = Seq(
+    "-DnativeImage.handlerMetadataGroupId=io.netty",
+    "-Dio.netty.bootstrap.extensions=serviceload",
+    "-XX:+AllowRedefinitionToAddDeleteMethods",
+    "--add-exports", "java.base/sun.security.x509=ALL-UNNAMED",
+    "-enableassertions"
+  )
 
-    def compile = T{
-      // Hack to satisfy fragile tests that look for /test-classes/ in the file paths
-      val sup = super.compile()
-      val testClasses = T.dest / "test-classes"
-      if (os.exists(sup.classes.path)) os.copy(sup.classes.path, testClasses, createFolders = true)
-      sup.copy(classes = PathRef(testClasses))
-    }
-
-    def javacOptions = Seq("-source", "1.8", "-target", "1.8")
+  def compile = T{
+    // Hack to satisfy fragile tests that look for /test-classes/ in the file paths
+    val sup = super.compile()
+    val testClasses = T.dest / "test-classes"
+    if (os.exists(sup.classes.path)) os.copy(sup.classes.path, testClasses, createFolders = true)
+    sup.copy(classes = PathRef(testClasses))
   }
 }
+trait NettyTestSuiteModule extends NettyBaseTestSuiteModule{
+
+}
+trait NettyModule extends NettyBaseModule{
+  def testModuleDeps: Seq[MavenModule] = Nil
+  def testIvyDeps: T[Agg[mill.scalalib.Dep]] = T{ Agg() }
+
+  object test extends NettyBaseTestSuiteModule with MavenTests{
+    def moduleDeps = super.moduleDeps ++ testModuleDeps
+    def ivyDeps = super.ivyDeps() ++ testIvyDeps()
+    def forkWorkingDir = NettyModule.this.millSourcePath
+    def forkArgs = super.forkArgs() ++ Seq(
+      "-Dnativeimage.handlerMetadataArtifactId=netty-" + NettyModule.this.millModuleSegments.parts.last,
+    )
+
+  }
+}
+
+trait NettyJniModule extends NettyModule {
+  def jniLibraryName: T[String]
+  def cSources = T.source(millSourcePath / "src" / "main" / "c")
+  def resources = T{
+    os.copy(clang().path, T.dest / "META-INF" / "native" / jniLibraryName(), createFolders = true)
+    Seq(PathRef(T.dest))
+  }
+  def clang = T{
+    val Seq(sourceJar) = resolveDeps(
+      deps = T.task(Agg(ivy"io.netty:netty-jni-util:0.0.9.Final").map(bindDependency())),
+      sources = true
+    )().toSeq
+
+    os.makeDir.all(T.dest  / "src" / "main" / "c")
+    os.proc("jar", "xf", sourceJar.path).call(cwd = T.dest  / "src" / "main" / "c")
+
+    os.proc(
+      "clang",
+      // CFLAGS
+      "-O3", "-Werror", "-fno-omit-frame-pointer",
+      "-Wunused-variable", "-fvisibility=hidden",
+      "-I" + (T.dest / "src" / "main" / "c"),
+      "-I" + `transport-native-unix-common`.cHeaders().path,
+      "-I" + sys.props("java.home") + "/include/",
+      "-I" + sys.props("java.home") + "/include/darwin",
+      // LD_FLAGS
+      "-Wl,-weak_library," + (`transport-native-unix-common`.make()._1.path / "libnetty-unix-common.a"),
+      "-Wl,-platform_version,macos,10.9,10.9",
+      "-Wl,-single_module",
+      "-Wl,-undefined",
+      "-Wl,dynamic_lookup",
+      "-fno-common",
+      "-DPIC",
+      // sources
+      os.list(cSources().path)
+    ).call(cwd = T.dest, env = Map("MACOSX_DEPLOYMENT_TARGET" -> "10.9"))
+
+    PathRef(T.dest / "a.out")
+
+  }
+}
+
 
 object all extends NettyModule{
 
@@ -294,21 +346,21 @@ object `resolver-dns-classes-macos` extends NettyModule{
   def moduleDeps = Seq(common, resolver, `transport-native-unix-common`, `resolver-dns`)
 }
 
-object `resolver-dns-native-macos` extends NettyModule{
+
+object `resolver-dns-native-macos` extends NettyJniModule {
+  def jniLibraryName = "libnetty_resolver_dns_native_macos_aarch_64.jnilib"
   def moduleDeps = Seq(resolver)
   def testModuleDeps = Seq(`resolver-dns`, `resolver-dns-classes-macos`)
   def testIvyDeps = Agg(
     ivy"org.apache.directory.server:apacheds-protocol-dns:1.5.7"
   )
+
+
 }
 
-object testsuite extends NettyModule{
+object testsuite extends NettyTestSuiteModule{
   def moduleDeps = Seq(common, resolver, transport, `transport-sctp`, handler, `codec-http`, `transport-udt`)
-  def ivyDeps = Agg(
-    ivy"org.junit.jupiter:junit-jupiter-api:5.9.0",
-    ivy"org.junit.jupiter:junit-jupiter-params:5.9.0",
-    ivy"org.assertj:assertj-core:3.18.0",
-    ivy"org.hamcrest:hamcrest-library:1.3",
+  def ivyDeps = super.ivyDeps() ++ Agg(
     ivy"org.slf4j:slf4j-api:1.7.30",
     ivy"org.tukaani:xz:1.5",
   )
@@ -395,47 +447,10 @@ object `transport-native-epoll` extends NettyModule{
   )
 }
 
-object `transport-native-kqueue` extends NettyModule{
+object `transport-native-kqueue` extends NettyJniModule{
+  def jniLibraryName = "libnetty_transport_native_kqueue.jnilib"
   def moduleDeps = Seq(common, buffer, transport, `transport-native-unix-common`, `transport-classes-kqueue`)
   def testModuleDeps = Seq(testsuite, `transport-native-unix-common-tests`)
-  def cSources = T.source(millSourcePath / "src" / "main" / "c")
-  def resources = T{
-    os.copy(clang().path, T.dest / "META-INF" / "native" / "libnetty_transport_native_kqueue.jnilib", createFolders = true)
-    Seq(PathRef(T.dest))
-  }
-  def clang = T{
-    val Seq(sourceJar) = resolveDeps(
-      deps = T.task(Agg(ivy"io.netty:netty-jni-util:0.0.9.Final").map(bindDependency())),
-      sources = true
-    )().toSeq
-
-    os.makeDir.all(T.dest  / "src" / "main" / "c")
-    os.proc("jar", "xf", sourceJar.path).call(cwd = T.dest  / "src" / "main" / "c")
-
-    os.proc(
-      "clang",
-      // CFLAGS
-      "-O3", "-Werror", "-fno-omit-frame-pointer",
-      "-Wunused-variable", "-fvisibility=hidden",
-      "-I" + (T.dest / "src" / "main" / "c"),
-      "-I" + `transport-native-unix-common`.cHeaders().path,
-      "-I" + sys.props("java.home") + "/include/",
-      "-I" + sys.props("java.home") + "/include/darwin",
-      // LD_FLAGS
-      "-Wl,-weak_library," + (`transport-native-unix-common`.make()._1.path / "libnetty-unix-common.a"),
-      "-Wl,-platform_version,macos,10.9,10.9",
-      "-Wl,-single_module",
-      "-Wl,-undefined",
-      "-Wl,dynamic_lookup",
-      "-fno-common",
-      "-DPIC",
-      // sources
-      os.list(cSources().path)
-    ).call(cwd = T.dest, env = Map("MACOSX_DEPLOYMENT_TARGET" -> "10.9"))
-
-    PathRef(T.dest / "a.out")
-
-  }
 }
 
 object `transport-native-unix-common` extends NettyModule{
