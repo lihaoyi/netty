@@ -103,7 +103,7 @@
         </os>
       </activation>
       <properties>
-        <exe.compiler>/Users/lihaoyi/Github/netty/echo.sh</exe.compiler>
+        <exe.compiler>clang</exe.compiler>
         <jni.platform>darwin</jni.platform>
       </properties>
       <build>
@@ -174,7 +174,7 @@
     <profile>
       <id>mac-m1-cross-compile</id>
       <properties>
-        <exe.compiler>/Users/lihaoyi/Github/netty/echo.sh</exe.compiler>
+        <exe.compiler>clang</exe.compiler>
         <jni.platform>darwin</jni.platform>
         <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system -->
         <jni.classifier>${os.detected.name}-aarch_64</jni.classifier>
@@ -244,7 +244,7 @@
     <profile>
       <id>mac-intel-cross-compile</id>
       <properties>
-        <exe.compiler>/Users/lihaoyi/Github/netty/echo.sh</exe.compiler>
+        <exe.compiler>clang</exe.compiler>
         <jni.platform>darwin</jni.platform>
         <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system -->
         <jni.classifier>${os.detected.name}-x86_64</jni.classifier>
@@ -531,7 +531,7 @@
         </os>
       </activation>
       <properties>
-        <exe.compiler>/Users/lihaoyi/Github/netty/echo.sh</exe.compiler>
+        <exe.compiler>clang</exe.compiler>
         <exe.make>gmake</exe.make>
         <jni.platform>freebsd</jni.platform>
       </properties>
@@ -605,7 +605,7 @@
         </os>
       </activation>
       <properties>
-        <exe.compiler>/Users/lihaoyi/Github/netty/echo.sh</exe.compiler>
+        <exe.compiler>clang</exe.compiler>
         <exe.make>gmake</exe.make>
         <jni.platform>openbsd</jni.platform>
       </properties>
