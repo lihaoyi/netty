@@ -2,11 +2,7 @@ import mill._, javalib._
 import $ivy.`org.codehaus.groovy:groovy:3.0.9`
 import $ivy.`org.codehaus.groovy:groovy-ant:3.0.9`
 import $ivy.`ant:ant-optional:1.5.3-1`
-// TODO:
-// testsuite*
-// transport-native-epoll.test
-//   failed to load the required native library
-// transport-udt
+
 
 trait NettyBaseModule extends MavenModule{
   def javacOptions = Seq("-source", "1.8", "-target", "1.8")
@@ -379,9 +375,7 @@ object `testsuite-http2` extends NettyTestSuiteModule{
 object `testsuite-native` extends NettyTestSuiteModule{
   def moduleDeps = Seq(`transport-native-kqueue`, `resolver-dns-native-macos`, `resolver-dns-classes-macos`, `transport-native-epoll`)
   def testModuleDeps = Seq(`resolver-dns-classes-macos`)
-  override def sources = T.sources(
-    millSourcePath / "src" / "test" / "java"
-  )
+  override def sources = T.sources( millSourcePath / "src" / "test" / "java" )
 }
 
 object `testsuite-native-image` extends NettyTestSuiteModule{
@@ -407,10 +401,10 @@ object `testsuite-osgi` extends NettyTestSuiteModule{
     transport, `transport-sctp`, `transport-udt`
   )
 
-  def ivyDeps = Agg(
+  override def sources = T.sources( millSourcePath / "src" / "test" / "java" )
+
+  def ivyDeps = super.ivyDeps() ++ Agg(
     ivy"org.apache.felix:org.apache.felix.configadmin:1.9.14",
-  )
-  def testIvyDeps = Agg(
     ivy"org.ops4j.pax.exam:pax-exam-junit4:4.13.0",
     ivy"org.ops4j.pax.exam:pax-exam-container-native:4.13.0",
     ivy"org.ops4j.pax.exam:pax-exam-link-assembly:4.13.0",
