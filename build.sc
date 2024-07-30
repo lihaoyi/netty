@@ -400,9 +400,38 @@ object `transport-native-kqueue` extends NettyModule{
 
 object `transport-native-unix-common` extends NettyModule{
   def moduleDeps = Seq(common, buffer, transport)
-  def ivyDeps = Agg(
-    ivy"org.junit.jupiter:junit-jupiter-api:5.9.0",
-  )
+  def ivyDeps = Agg(ivy"org.junit.jupiter:junit-jupiter-api:5.9.0")
+
+  def makefile = T.source(millSourcePath / "Makefile")
+  def cSources = T.source(millSourcePath / "src" / "main" / "c")
+
+  def make = T{
+    val Seq(sourceJar) = resolveDeps(
+      deps = T.task(Agg(ivy"io.netty:netty-jni-util:0.0.9.Final").map(bindDependency())),
+      sources = true
+    )().toSeq
+
+    os.copy(makefile().path, T.dest / "Makefile")
+    os.copy(cSources().path, T.dest / "src" / "main" / "c", createFolders = true)
+    os.proc("jar", "xf", sourceJar.path).call(cwd = T.dest  / "src" / "main" / "c")
+
+    os.proc("make").call(
+      cwd = T.dest,
+      env = Map(
+        "CC" -> "clang",
+        "AR" -> "ar",
+        "JNI_PLATFORM" -> "darwin",
+        "LIB_DIR" -> "lib-out",
+        "OBJ_DIR" -> "obj-out",
+        "MACOSX_DEPLOYMENT_TARGET" -> "10.9",
+        "CFLAGS" -> "-target arm64-apple-macos11 -O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/include/ -I/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/include/darwin",
+        "LD_FLAGS" -> "-arch arm64 -Wl,--no-as-needed -lrt -Wl,-platform_version,macos,10.9,10.9",
+        "LIB_NAME" -> "libnetty-unix-common"
+      )
+    )
+
+    (PathRef(T.dest / "lib-out"), PathRef(T.dest / "obj-out"))
+  }
 }
 
 object `transport-native-unix-common-tests` extends NettyModule{
