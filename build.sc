@@ -5,7 +5,6 @@ import $ivy.`ant:ant-optional:1.5.3-1`
 // TODO:
 //   testsuite-shading
 //   testsuite-native-image*
-//   testsuite-http2
 //   testsuite-autobahn
 
 trait NettyBaseModule extends MavenModule{
@@ -369,11 +368,63 @@ object testsuite extends NettyTestSuiteModule{
 
 object `testsuite-autobahn` extends NettyTestSuiteModule{
   def moduleDeps = Seq(common, buffer, transport, `codec-http`)
+//  override def test(args: String*) = {
+//    val server = os.proc(assembly().path).spawn()
+//    os.proc(
+//      "docker", "run", "-it", "--rm",
+////      "-v", s"${PWD}/config:/config",
+////      "-v", s"${PWD}/reports:/reports",
+//      "-p", "9000:9000",
+//      "--name", "fuzzingserver",
+//      "crossbario/autobahn-testsuite"
+//    ).call()
+//    server.destroy()
+//  }
 }
 
 
 object `testsuite-http2` extends NettyTestSuiteModule{
   def moduleDeps = Seq(common, buffer, transport, handler, `codec-http`, `codec-http2`)
+  def h2Spec = T{
+
+    val url = "https://github.com/summerwind/h2spec/releases/download/v2.6.0/h2spec_darwin_amd64.tar.gz"
+    os.write(T.dest / "h2spec.tar.gz", requests.get(url))
+
+    os.proc("tar", "xzf", T.dest / "h2spec.tar.gz").call(cwd = T.dest)
+    PathRef(T.dest / "h2spec")
+  }
+  override def test(args: String*) = T.command{
+    val server = os.proc(assembly().path).spawn(stdout = os.Inherit)
+    try {
+      Thread.sleep(1000) // let the server start up
+      os.proc(h2Spec().path, "-p9000", "--junit-report", T.dest / "report.html")
+        .call(stdout = os.Inherit, check = false)
+      val xmlFile = scala.xml.XML.loadFile((T.dest / "report.html").toIO)
+      val testCasesWithErrors = (xmlFile \\ "testcase").filter { testcase =>
+        (testcase \\ "error").nonEmpty
+      }
+
+      // Extract the package and classname
+      val errorDetails = testCasesWithErrors.map { testcase =>
+        val pkg = (testcase \ "@package").text
+        val classname = (testcase \ "@classname").text
+        (pkg, classname)
+      }
+
+      // Check results
+      val expectedFailures = Set(
+        ("http2/3.5", "Sends invalid connection preface"),
+        ("http2/5.1", "half closed (remote): Sends a HEADERS frame"),
+        ("http2/5.1", "closed: Sends a HEADERS frame"),
+        ("http2/5.1.1", "Sends stream identifier that is numerically smaller than previous"),
+        ("http2/8.1.2.3", "Sends a HEADERS frame that omits \":method\" pseudo-header field"),
+        ("http2/8.1.2.3", "Sends a HEADERS frame that omits \":scheme\" pseudo-header field"),
+        ("http2/8.1.2.3", "Sends a HEADERS frame that omits \":path\" pseudo-header field"),
+      )
+      assert(errorDetails.toSet.subsetOf(expectedFailures))
+    } finally server.destroyForcibly()
+    ("", Seq.empty[testrunner.TestResult])
+  }
 }
 
 object `testsuite-native` extends NettyTestSuiteModule{
