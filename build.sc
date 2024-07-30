@@ -4,7 +4,7 @@ import $ivy.`org.codehaus.groovy:groovy-ant:3.0.9`
 import $ivy.`ant:ant-optional:1.5.3-1`
 // TODO:
 //   testsuite-shading
-//   testsuite-native-image
+//   testsuite-native-image*
 //   testsuite-http2
 //   testsuite-autobahn
 
