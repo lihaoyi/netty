@@ -367,34 +367,37 @@ object testsuite extends NettyTestSuiteModule{
 }
 
 
-object `testsuite-autobahn` extends NettyModule{
+object `testsuite-autobahn` extends NettyTestSuiteModule{
   def moduleDeps = Seq(common, buffer, transport, `codec-http`)
 }
 
 
-object `testsuite-http2` extends NettyModule{
+object `testsuite-http2` extends NettyTestSuiteModule{
   def moduleDeps = Seq(common, buffer, transport, handler, `codec-http`, `codec-http2`)
 }
 
-object `testsuite-native` extends NettyModule{
-  def moduleDeps = Seq(`transport-native-kqueue`, `resolver-dns-native-macos`, `transport-native-epoll`)
+object `testsuite-native` extends NettyTestSuiteModule{
+  def moduleDeps = Seq(`transport-native-kqueue`, `resolver-dns-native-macos`, `resolver-dns-classes-macos`, `transport-native-epoll`)
   def testModuleDeps = Seq(`resolver-dns-classes-macos`)
+  override def sources = T.sources(
+    millSourcePath / "src" / "test" / "java"
+  )
 }
 
-object `testsuite-native-image` extends NettyModule{
+object `testsuite-native-image` extends NettyTestSuiteModule{
   def moduleDeps = Seq(common, buffer, transport, handler, `codec-http`)
 }
 
-object `testsuite-native-image-client` extends NettyModule{
+object `testsuite-native-image-client` extends NettyTestSuiteModule{
   def moduleDeps = Seq(transport, `resolver-dns`)
 }
 
-object `testsuite-native-image-client-runtime-init` extends NettyModule{
+object `testsuite-native-image-client-runtime-init` extends NettyTestSuiteModule{
   def moduleDeps = Seq(common)
 }
 
 
-object `testsuite-osgi` extends NettyModule{
+object `testsuite-osgi` extends NettyTestSuiteModule{
   def moduleDeps = Seq(
     buffer,
     codec, `codec-dns`, `codec-haproxy`, `codec-http`, `codec-http2`, `codec-memcache`, `codec-mqtt`, `codec-socks`, `codec-stomp`,
@@ -415,7 +418,7 @@ object `testsuite-osgi` extends NettyModule{
   )
 }
 
-object `testsuite-shading` extends NettyModule{
+object `testsuite-shading` extends NettyTestSuiteModule{
   def moduleDeps = Seq(common)
 }
 
@@ -448,7 +451,7 @@ object `transport-native-epoll` extends NettyModule{
 }
 
 object `transport-native-kqueue` extends NettyJniModule{
-  def jniLibraryName = "libnetty_transport_native_kqueue.jnilib"
+  def jniLibraryName = "libnetty_transport_native_kqueue_aarch_64.jnilib"
   def moduleDeps = Seq(common, buffer, transport, `transport-native-unix-common`, `transport-classes-kqueue`)
   def testModuleDeps = Seq(testsuite, `transport-native-unix-common-tests`)
 }
