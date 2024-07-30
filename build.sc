@@ -2,7 +2,11 @@ import mill._, javalib._
 import $ivy.`org.codehaus.groovy:groovy:3.0.9`
 import $ivy.`org.codehaus.groovy:groovy-ant:3.0.9`
 import $ivy.`ant:ant-optional:1.5.3-1`
-
+// TODO:
+//   testsuite-shading
+//   testsuite-native-image
+//   testsuite-http2
+//   testsuite-autobahn
 
 trait NettyBaseModule extends MavenModule{
   def javacOptions = Seq("-source", "1.8", "-target", "1.8")
@@ -414,6 +418,7 @@ object `testsuite-osgi` extends NettyTestSuiteModule{
 
 object `testsuite-shading` extends NettyTestSuiteModule{
   def moduleDeps = Seq(common)
+  override def sources = T.sources( millSourcePath / "src" / "test" / "java" )
 }
 
 object transport extends NettyModule{
@@ -503,8 +508,7 @@ object `transport-native-unix-common` extends NettyModule{
     (PathRef(T.dest / "lib-out"), PathRef(T.dest / "obj-out"))
   }
 }
-
-object `transport-native-unix-common-tests` extends NettyModule{
+object `transport-native-unix-common-tests` extends NettyTestSuiteModule{
   def moduleDeps = Seq(transport, `transport-native-unix-common`)
 }
 
