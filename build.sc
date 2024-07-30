@@ -397,9 +397,12 @@ object `testsuite-http2` extends NettyTestSuiteModule{
     val server = os.proc(assembly().path).spawn(stdout = os.Inherit)
     try {
       Thread.sleep(1000) // let the server start up
-      os.proc(h2Spec().path, "-p9000", "--junit-report", T.dest / "report.html")
+
+      os.proc(h2Spec().path, "-p9000", "--junit-report", T.dest / "report.xml")
         .call(stdout = os.Inherit, check = false)
-      val xmlFile = scala.xml.XML.loadFile((T.dest / "report.html").toIO)
+
+      // Use the Scala XML library to parse and fish out the data we want from the report
+      val xmlFile = scala.xml.XML.loadFile((T.dest / "report.xml").toIO)
       val testCasesWithErrors = (xmlFile \\ "testcase").filter { testcase =>
         (testcase \\ "error").nonEmpty
       }
