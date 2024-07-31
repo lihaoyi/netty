@@ -479,7 +479,7 @@ object transport extends NettyModule{
   def moduleDeps = Seq(common, buffer, resolver)
 }
 
-object `transport-blockhound-tests` extends NettyModule{
+object `transport-blockhound-tests` extends NettyTestSuiteModule{
   def moduleDeps = Seq(transport, handler, `resolver-dns`)
   def ivyDeps = Agg(
     ivy"io.projectreactor.tools:blockhound:1.0.6.RELEASE"
