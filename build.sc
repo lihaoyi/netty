@@ -29,8 +29,12 @@ trait NettyBaseTestSuiteModule extends NettyBaseModule with TestModule.Junit5{
     ivy"io.netty:netty-tcnative-classes:2.0.65.Final",
     ivy"io.netty:netty-tcnative-boringssl-static:2.0.65.Final",
     ivy"com.barchart.udt:barchart-udt-bundle:2.3.0",
-    ivy"com.aayushatharva.brotli4j:native-osx-aarch64:1.16.0",
     ivy"com.aayushatharva.brotli4j:native-linux-x86_64:1.16.0",
+    ivy"com.aayushatharva.brotli4j:native-linux-aarch64:1.16.0",
+    ivy"com.aayushatharva.brotli4j:native-linux-riscv64:1.16.0",
+    ivy"com.aayushatharva.brotli4j:native-osx-x86_64:1.16.0",
+    ivy"com.aayushatharva.brotli4j:native-osx-aarch64:1.16.0",
+    ivy"com.aayushatharva.brotli4j:native-windows-x86_64:1.16.0",
     ivy"org.jboss.marshalling:jboss-marshalling:2.0.5.Final",
     ivy"com.aayushatharva.brotli4j:brotli4j:1.16.0",
     ivy"org.apache.commons:commons-compress:1.26.0",
@@ -48,7 +52,7 @@ trait NettyBaseTestSuiteModule extends NettyBaseModule with TestModule.Junit5{
   def forkArgs = Seq(
     "-DnativeImage.handlerMetadataGroupId=io.netty",
     "-Dio.netty.bootstrap.extensions=serviceload",
-    "-XX:+AllowRedefinitionToAddDeleteMethods",
+//    "-XX:+AllowRedefinitionToAddDeleteMethods",
     "--add-exports", "java.base/sun.security.x509=ALL-UNNAMED",
     "-enableassertions"
   )
@@ -80,44 +84,57 @@ trait NettyModule extends NettyBaseModule{
 }
 
 trait NettyJniModule extends NettyModule {
+  def clangEnabled: Boolean
   def jniLibraryName: T[String]
   def cSources = T.source(millSourcePath / "src" / "main" / "c")
   def resources = T{
     os.copy(clang().path, T.dest / "META-INF" / "native" / jniLibraryName(), createFolders = true)
     Seq(PathRef(T.dest))
   }
-  def clang = T{
-    val Seq(sourceJar) = resolveDeps(
-      deps = T.task(Agg(ivy"io.netty:netty-jni-util:0.0.9.Final").map(bindDependency())),
-      sources = true
-    )().toSeq
+  def clang =
+    if (!clangEnabled) T{ PathRef(os.temp())}
+    else T{
+      val Seq(sourceJar) = resolveDeps(
+        deps = T.task(Agg(ivy"io.netty:netty-jni-util:0.0.9.Final").map(bindDependency())),
+        sources = true
+      )().toSeq
 
-    os.makeDir.all(T.dest  / "src" / "main" / "c")
-    os.proc("jar", "xf", sourceJar.path).call(cwd = T.dest  / "src" / "main" / "c")
+      os.makeDir.all(T.dest  / "src" / "main" / "c")
+      os.proc("jar", "xf", sourceJar.path).call(cwd = T.dest  / "src" / "main" / "c")
 
-    os.proc(
-      "clang",
-      // CFLAGS
-      "-O3", "-Werror", "-fno-omit-frame-pointer",
-      "-Wunused-variable", "-fvisibility=hidden",
-      "-I" + (T.dest / "src" / "main" / "c"),
-      "-I" + `transport-native-unix-common`.cHeaders().path,
-      "-I" + sys.props("java.home") + "/include/",
-      "-I" + sys.props("java.home") + "/include/darwin",
-      // LD_FLAGS
-      "-Wl,-weak_library," + (`transport-native-unix-common`.make()._1.path / "libnetty-unix-common.a"),
-      "-Wl,-platform_version,macos,10.9,10.9",
-      "-Wl,-single_module",
-      "-Wl,-undefined",
-      "-Wl,dynamic_lookup",
-      "-fno-common",
-      "-DPIC",
-      // sources
-      os.list(cSources().path)
-    ).call(cwd = T.dest, env = Map("MACOSX_DEPLOYMENT_TARGET" -> "10.9"))
-
-    PathRef(T.dest / "a.out")
-  }
+      val linkFlags = if (isOSX) Seq(
+        "-Wl,-weak_library," + (`transport-native-unix-common`.make()._1.path / "libnetty-unix-common.a"),
+        "-Wl,-platform_version,macos,10.9,10.9",
+        "-Wl,-single_module",
+        "-Wl,-undefined",
+        "-Wl,dynamic_lookup",
+        "-fno-common",
+        "-DPIC",
+      ) else Seq(
+        "-Wl,-z,relro",
+        "-Wl,-z,now",
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections",
+        "-shared",
+        "-L" + `transport-native-unix-common`.cHeaders().path
+      )
+      os.proc(
+        "clang",
+        // CFLAGS
+        "-O3", "-Werror", "-fno-omit-frame-pointer",
+        "-Wunused-variable", "-fvisibility=hidden",
+        "-I" + (T.dest / "src" / "main" / "c"),
+        "-I" + `transport-native-unix-common`.cHeaders().path,
+        "-I" + sys.props("java.home") + "/include/",
+        "-I" + sys.props("java.home") + "/include/darwin",
+        "-I" + sys.props("java.home") + "/include/linux",
+        // LD_FLAGS
+        linkFlags,
+        // sources
+        os.list(cSources().path)
+      ).call(cwd = T.dest, env = Map("MACOSX_DEPLOYMENT_TARGET" -> "10.9"))
+      PathRef(T.dest / "a.out")
+    }
 }
 
 
@@ -131,6 +148,7 @@ object bom extends NettyModule{
 
 object buffer extends NettyModule{
   def moduleDeps = Seq(common)
+  def ivyDeps = Agg(ivy"org.jctools:jctools-core:4.0.5")
   def testIvyDeps = Agg(ivy"org.jctools:jctools-core:4.0.5")
 }
 
@@ -355,7 +373,7 @@ object `resolver-dns-native-macos` extends NettyJniModule {
   def testIvyDeps = Agg(
     ivy"org.apache.directory.server:apacheds-protocol-dns:1.5.7"
   )
-
+  def clangEnabled = isOSX
 
 }
 
@@ -389,7 +407,9 @@ object `testsuite-http2` extends NettyTestSuiteModule{
   def moduleDeps = Seq(common, buffer, transport, handler, `codec-http`, `codec-http2`)
   def h2Spec = T{
 
-    val url = "https://github.com/summerwind/h2spec/releases/download/v2.6.0/h2spec_darwin_amd64.tar.gz"
+    val isOSX = sys.props("os.name").toLowerCase.contains("mac")
+    val binaryName = if (isOSX) "h2spec_darwin_amd64.tar.gz" else "h2spec_linux_amd64.tar.gz"
+    val url = s"https://github.com/summerwind/h2spec/releases/download/v2.6.0/$binaryName"
     os.write(T.dest / "h2spec.tar.gz", requests.get(url))
 
     os.proc("tar", "xzf", T.dest / "h2spec.tar.gz").call(cwd = T.dest)
@@ -483,7 +503,7 @@ object transport extends NettyModule{
 
 object `transport-blockhound-tests` extends NettyTestSuiteModule{
   def moduleDeps = Seq(transport, handler, `resolver-dns`)
-  def ivyDeps = Agg(
+  def ivyDeps = super.ivyDeps() ++ Agg(
     ivy"io.projectreactor.tools:blockhound:1.0.6.RELEASE"
   )
 }
@@ -497,7 +517,7 @@ object `transport-classes-kqueue` extends NettyModule{
 }
 
 object `transport-native-epoll` extends NettyJniModule{
-  def jniLibraryName = "libnetty_transport_native_epoll_aarch_64.jnilib"
+  def jniLibraryName = "libnetty_transport_native_epoll_x86_64.so"
   def moduleDeps = Seq(common, buffer, transport, `transport-native-unix-common`, `transport-classes-epoll`)
   def testModuleDeps = Seq(testsuite, `transport-native-unix-common-tests`)
 
@@ -505,7 +525,8 @@ object `transport-native-epoll` extends NettyJniModule{
     ivy"io.github.artsok:rerunner-jupiter:2.1.6"
   )
 
-  def clang = if (!isOSX) T{ super.clang() } else T{ PathRef(os.temp())}
+  // Stub this out on OS-X
+  def clangEnabled = !isOSX
 }
 
 object `transport-native-kqueue` extends NettyJniModule{
@@ -514,7 +535,7 @@ object `transport-native-kqueue` extends NettyJniModule{
   def testModuleDeps = Seq(testsuite, `transport-native-unix-common-tests`)
 
   // Stub this out on linux
-  def clang = if (isOSX) T{ super.clang() } else T{ PathRef(os.temp())}
+  def clangEnabled = isOSX
 }
 
 object `transport-native-unix-common` extends NettyModule{
@@ -550,7 +571,6 @@ object `transport-native-unix-common` extends NettyModule{
         "OBJ_DIR" -> "obj-out",
         "MACOSX_DEPLOYMENT_TARGET" -> "10.9",
         "CFLAGS" -> Seq(
-          "-mmacosx-version-min=10.9",
           "-O3",
           "-Werror",
           "-Wno-attributes",
@@ -560,6 +580,7 @@ object `transport-native-unix-common` extends NettyModule{
           "-fvisibility=hidden",
           "-I" + sys.props("java.home") + "/include/",
           "-I" + sys.props("java.home") + "/include/darwin",
+          "-I" + sys.props("java.home") + "/include/linux",
         ).mkString(" "),
         "LD_FLAGS" -> "-Wl,--no-as-needed -lrt -Wl,-platform_version,macos,10.9,10.9",
         "LIB_NAME" -> "libnetty-unix-common"
@@ -608,7 +629,7 @@ object `transport-udt` extends NettyModule{
 ...Test io.netty.handler.codec.stomp.StompSubframeEncoderTest#testEscapeStompHeaders() finished...
 ...
 
-> ./mill 'testsuite-{http2,native}'.test
+> ./mill testsuite-http2.test
 ...Test io.netty.testsuite_native.NativeLoadingTest#testNativeLoadingEpoll()...
 ...Test io.netty.testsuite_native.NativeLoadingTest#testNativeLoadingKqueue()...
 ...
